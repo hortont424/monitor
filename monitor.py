@@ -38,7 +38,7 @@ def __main__():
         for (index, (hostname, title)) in enumerate(project["ping_hosts"]):
             project["ping_hosts"][index].append(ping(hostname))
 
-    config["date"] = datetime.datetime.utcnow().isoformat()
+    config["date"] = datetime.datetime.utcnow().strftime("%Y.%m.%d %H:%M:%S")
 
     write_config(os.path.join(dir, "output.json"), config)
 
