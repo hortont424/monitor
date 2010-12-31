@@ -4,6 +4,11 @@
             "ping_hosts": [
                 ["milkyway.cs.rpi.edu", "Overall Server"]
             ]
+        },
+        "hortont": {
+            "ping_hosts": [
+                ["hortont.com", "prgmr"]
+            ]
         }
     }
 }
