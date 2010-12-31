@@ -3,9 +3,14 @@ import json
 import copy
 import datetime
 import os.path
+import platform
 
 def ping(hostname):
-    cmd = ["ping", "-t", "5", "-o", hostname]
+    if platform.system() == "Darwin" || platform.system() == "BSD":
+        cmd = ["ping", "-t", "5", "-o", hostname]
+    else:
+        cmd = ["ping", "-w", "5", hostname]
+
     proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     return proc.wait() == 0
 
