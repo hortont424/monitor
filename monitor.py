@@ -6,7 +6,7 @@ import os.path
 import platform
 
 def ping(hostname):
-    if platform.system() == "Darwin" || platform.system() == "BSD":
+    if platform.system() == "Darwin" or platform.system() == "BSD":
         cmd = ["ping", "-t", "5", "-o", hostname]
     else:
         cmd = ["ping", "-w", "5", hostname]
