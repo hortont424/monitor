@@ -2,6 +2,7 @@ import subprocess
 import json
 import copy
 import datetime
+import os.path
 
 def ping(hostname):
     cmd = ["ping", "-t", "5", "-o", hostname]
@@ -25,7 +26,8 @@ def write_config(filename, config):
     file.close()
 
 def __main__():
-    config = load_config("config.json")
+    dir = os.path.dirname(__file__)
+    config = load_config(os.path.join(dir, "config.json"))
 
     for (name, project) in config["projects"].items():
         for (index, (hostname, title)) in enumerate(project["ping_hosts"]):
@@ -33,7 +35,7 @@ def __main__():
 
     config["date"] = datetime.datetime.utcnow().isoformat()
 
-    write_config("output.json", config)
+    write_config(os.path.join(dir, "output.json"), config)
 
 if __name__ == "__main__":
     __main__()
