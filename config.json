@@ -1,0 +1,9 @@
+{
+    "projects": {
+        "milkyway@home": {
+            "ping_hosts": [
+                ["milkyway.cs.rpi.edu", "Overall Server"]
+            ]
+        }
+    }
+}
