@@ -1,29 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html xmlns:py="http://genshi.edgewall.org/">
 <head>
-    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <title>is milkyway@home down?</title>
-    <script type="text/javascript" src="http://www.google.com/jsapi?key=ABQIAAAAXC0m8HOJIB3u7h81RUNg5BTOJSRIOk7Euuko4yvX-qvJ0VqwUhQ8UDMtoCMaxs6C7da2o2D-2oyobw"></script>
-    <script type="text/javascript">
-    //<![CDATA[
-    google.load("jquery", "1.4.2");
-
-    function onLoad()
-    {
-        $.post('http://ismilkywaydown.com/output.json',
-            {},
-            function(data, textStatus, XHR)
-            {
-                jsondata = jQuery.parseJSON(data);
-                $('#statustext').html(jsondata["projects"]["milkyway@home"]["ping_hosts"][0][2] ? "NO" : "YES");
-                $('#datetext').html("Last updated " + jsondata["date"]);
-            }
-        )
-    }
-
-    google.setOnLoadCallback(onLoad);
-    //]]>
-    </script>
     <style type="text/css" media="screen">
 
     /* CSS Reset */
@@ -98,6 +77,12 @@
         box-shadow: 0px 0px 25px #333;
     }
 
+    #downtext
+    {
+        color: 444;
+        font-weight: bold;
+    }
+
     #date
     {
         font-size: 1.0em;
@@ -112,7 +97,7 @@
 </head>
 
 <body id="index" onload="">
-<div id="status"><p id="statustext">DUNNO</p></div>
-<div id="date"><span id="datetext">Last updated at some point in the past</p></div>
+<div id="status"><p><span py:if="down">SORTA*</span><span py:if="ping and not down">NO</span><span py:if="not ping">YES</span></p></div>
+<div id="date"><span id="downtext" py:if="down">* ${", ".join(down)} are down</span><br/><br/>Last updated at $date</div>
 </body>
 </html>

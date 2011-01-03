@@ -1,11 +1,13 @@
 import subprocess
-import json
-import copy
 import datetime
 import os.path
 import platform
+import urllib2
+from genshi.template import TemplateLoader
+from BeautifulSoup import BeautifulSoup
 
 HOSTNAME = "milkyway.cs.rpi.edu"
+SERVICE_URL = "http://milkyway.cs.rpi.edu/milkyway/server_status.php"
 
 def ping(hostname):
     if platform.system() == "Darwin" or platform.system() == "BSD":
@@ -16,19 +18,39 @@ def ping(hostname):
     proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
     return proc.wait() == 0
 
-def write_config(filename, config):
-    file = open(filename, "w+")
-    file.write(json.dumps(config, sort_keys=True, indent=4))
-    file.close()
+def get_broken_services(url):
+    broken = []
+    soup = BeautifulSoup(urllib2.urlopen(url).read())
+
+    for row in soup('table')[1]('tr'):
+        tds = row('td')
+
+        if len(tds) == 3:
+            if tds[2].string != "Running":
+                broken.append(tds[0].string)
+
+    return broken
+
+def create_status_page(status):
+    status_file = open(os.path.join(os.path.dirname(__file__), "index.html"), "w+")
+    loader = TemplateLoader(os.path.join(os.path.dirname(__file__), "templates"), auto_reload=True)
+
+    tmpl = loader.load("index.html")
+    status_file.write(tmpl.generate(**status).render("html", doctype="html"))
+
+    status_file.close()
 
 def __main__():
-    dir = os.path.dirname(__file__)
-    config = {}
+    status = {}
 
-    config["ping"] = ping(HOSTNAME)
-    config["date"] = datetime.datetime.utcnow().strftime("%Y.%m.%d %H:%M:%S")
+    status["ping"] = ping(HOSTNAME)
 
-    write_config(os.path.join(dir, "output.json"), config)
+    if status["ping"]:
+        status["down"] = get_broken_services(SERVICE_URL)
+
+    status["date"] = datetime.datetime.utcnow().strftime("%Y.%m.%d %H:%M:%S")
+
+    create_status_page(status)
 
 if __name__ == "__main__":
     __main__()
