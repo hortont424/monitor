@@ -98,6 +98,6 @@
 
 <body id="index" onload="">
 <div id="status"><p><span py:if="down">SORTA*</span><span py:if="ping and not down">NO</span><span py:if="not ping">YES</span></p></div>
-<div id="date"><span id="downtext" py:if="down">* ${", ".join(down)} are down</span><br/><br/>Last updated at $date</div>
+<div id="date"><span id="downtext" py:if="down">* ${", ".join(down)} down</span><br/><br/>Last updated at $date</div>
 </body>
 </html>

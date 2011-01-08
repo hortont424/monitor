@@ -19,7 +19,7 @@ def ping(hostname):
     return proc.wait() == 0
 
 def get_broken_services(url):
-    broken = []
+    broken = set()
     soup = BeautifulSoup(urllib2.urlopen(url).read())
 
     for row in soup('table')[1]('tr'):
@@ -27,7 +27,12 @@ def get_broken_services(url):
 
         if len(tds) == 3:
             if tds[2].string != "Running":
-                broken.append(tds[0].string)
+                broken.add(tds[0].string)
+
+    waiting_assimilator = int(soup('table')[1]('tr')[-5]('td')[-1].string.replace(",",""))
+
+    if waiting_assimilator > 10000:
+        broken.add("separation_assimilator")
 
     return broken
 
