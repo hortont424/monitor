@@ -98,6 +98,23 @@
 
 <body id="index" onload="">
 <div id="status"><p><span py:if="down">SORTA*</span><span py:if="reachable and not down">NO</span><span py:if="not reachable">YES</span></p></div>
-<div id="date"><span id="downtext" py:if="down">* ${", ".join(down)} down</span><br/><br/>Last updated at $date</div>
+<div id="date"><span id="downtext" py:if="down">* ${", ".join(down)} down</span><br/><br/>Last updated at <time id="updated" datetime="$date_iso">$date</time></div>
+
+<script type="text/javascript">
+// The timestamp ships as UTC; rewrite it in whatever timezone the reader is
+// actually in. Without JS they keep the UTC text the server rendered.
+(function () {
+    var element = document.getElementById("updated");
+    var updated = new Date(element.getAttribute("datetime"));
+
+    if (!isNaN(updated.getTime())) {
+        element.firstChild.nodeValue = updated.toLocaleString(undefined, {
+            year: "numeric", month: "short", day: "numeric",
+            hour: "2-digit", minute: "2-digit", second: "2-digit",
+            timeZoneName: "short"
+        });
+    }
+})();
+</script>
 </body>
 </html>

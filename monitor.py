@@ -96,9 +96,12 @@ def main():
         # services has not actually changed.
         status["down"] = sorted(broken_services(html))
 
-    status["date"] = datetime.datetime.now(datetime.timezone.utc).strftime(
-        "%Y.%m.%d %H:%M:%S"
-    )
+    # The page shows this in the reader's own timezone, so it goes out as a
+    # machine-readable instant. `date` is only the no-JS fallback, and it says
+    # UTC out loud — an unlabelled UTC time reads as a wrong local time.
+    now = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+    status["date"] = now.strftime("%Y.%m.%d %H:%M:%S UTC")
+    status["date_iso"] = now.isoformat()
 
     write_status_page(status)
 
