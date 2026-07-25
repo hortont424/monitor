@@ -1,61 +1,107 @@
-import subprocess
+#!/usr/bin/env python3
+"""Generate the ismilkywaydown.com status page from Milkyway@home's server status."""
+
 import datetime
 import os.path
-import platform
-import urllib2
+import urllib.error
+import urllib.request
+
+from bs4 import BeautifulSoup
 from genshi.template import TemplateLoader
-from BeautifulSoup import BeautifulSoup
 
-HOSTNAME = "milkyway.cs.rpi.edu"
-SERVICE_URL = "http://milkyway.cs.rpi.edu/milkyway/server_status.php"
+SERVICE_URL = "https://milkyway.cs.rpi.edu/milkyway/server_status.php"
 
-def ping(hostname):
-    if platform.system() == "Darwin" or platform.system() == "BSD":
-        cmd = ["ping", "-t", "5", "-o", hostname]
-    else:
-        cmd = ["ping", "-w", "5", hostname]
+# A large assimilation backlog means work is being validated but not written
+# out, which is a stall even when every daemon reports "Running".
+ASSIMILATOR_BACKLOG_LIMIT = 10000
 
-    proc = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
-    return proc.wait() == 0
+HERE = os.path.dirname(os.path.abspath(__file__))
 
-def get_broken_services(url):
+
+def fetch(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "ismilkywaydown.com"})
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return response.read()
+
+
+def cell_text(cell):
+    return cell.get_text(strip=True)
+
+
+def daemon_rows(soup):
+    """Rows of the daemon status table, as (name, host, status).
+
+    Found by shape rather than by position: the first table containing rows of
+    exactly three cells. The page's table order has changed before, and looking
+    it up by index is what silently broke this script.
+    """
+    for table in soup("table"):
+        rows = [row for row in table("tr") if len(row("td")) == 3]
+        if rows:
+            return rows
+    return []
+
+
+def labelled_value(soup, label):
+    """Look up a two-column statistic by its label, wherever it lives."""
+    for table in soup("table"):
+        for row in table("tr"):
+            cells = row("td")
+            if len(cells) == 2 and cell_text(cells[0]) == label:
+                return cell_text(cells[1])
+    return None
+
+
+def broken_services(html):
+    soup = BeautifulSoup(html, "html.parser")
     broken = set()
-    soup = BeautifulSoup(urllib2.urlopen(url).read())
 
-    for row in soup('table')[1]('tr'):
-        tds = row('td')
+    for row in daemon_rows(soup):
+        name, _host, status = (cell_text(cell) for cell in row("td"))
+        if status != "Running":
+            broken.add(name)
 
-        if len(tds) == 3:
-            if tds[2].string != "Running":
-                broken.add(tds[0].string)
-
-    waiting_assimilator = int(soup('table')[1]('tr')[-5]('td')[-1].string.replace(",",""))
-
-    if waiting_assimilator > 10000:
-        broken.add("separation_assimilator")
+    backlog = labelled_value(soup, "Workunits waiting for assimilation")
+    if backlog is not None:
+        try:
+            if int(backlog.replace(",", "")) > ASSIMILATOR_BACKLOG_LIMIT:
+                broken.add("assimilator backlog")
+        except ValueError:
+            pass
 
     return broken
 
-def create_status_page(status):
-    status_file = open(os.path.join(os.path.dirname(__file__), "index.html"), "w+")
-    loader = TemplateLoader(os.path.join(os.path.dirname(__file__), "templates"), auto_reload=True)
 
-    tmpl = loader.load("index.html")
-    status_file.write(tmpl.generate(**status).render("html", doctype="html"))
+def write_status_page(status):
+    loader = TemplateLoader(os.path.join(HERE, "templates"), auto_reload=False)
+    template = loader.load("index.html")
+    page = template.generate(**status).render("html", doctype="html")
 
-    status_file.close()
+    with open(os.path.join(HERE, "index.html"), "w") as status_file:
+        status_file.write(page)
 
-def __main__():
-    status = {}
 
-    status["ping"] = ping(HOSTNAME)
+def main():
+    # `reachable` is whether the status page itself answered. That is the
+    # question the site is really asking — a host that replies to ICMP while
+    # its services are unreachable is down for every purpose that matters here.
+    status = {"reachable": True, "down": []}
 
-    if status["ping"]:
-        status["down"] = get_broken_services(SERVICE_URL)
+    try:
+        html = fetch(SERVICE_URL)
+    except (urllib.error.URLError, OSError):
+        status["reachable"] = False
+    else:
+        # sorted() so the rendered page is stable when the set of broken
+        # services has not actually changed.
+        status["down"] = sorted(broken_services(html))
 
-    status["date"] = datetime.datetime.utcnow().strftime("%Y.%m.%d %H:%M:%S")
+    status["date"] = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y.%m.%d %H:%M:%S"
+    )
 
-    create_status_page(status)
+    write_status_page(status)
+
 
 if __name__ == "__main__":
-    __main__()
+    main()
